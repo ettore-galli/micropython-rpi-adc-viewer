@@ -33,5 +33,8 @@
         ".micropy/micropython-stdlib-stubs-0.9.0/stdlib",
         ".micropy/BradenM-micropy-stubs-4f5a52a/frozen",
         ".micropy/dummy"
+    ],
+    "python.analysis.ignore": [
+        "./src/ssd1306_official/*"
     ]
 }

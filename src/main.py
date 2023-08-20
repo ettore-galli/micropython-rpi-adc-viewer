@@ -4,28 +4,20 @@ from machine import ADC, Pin, PWM
 import uasyncio as asyncio
 
 
-class PWMLed:
+class ADCMonitor:
     def __init__(
         self,
         pwm_value_logger,
         adc_delay_seconds: float = 0.05,
         adc_pin: int = 26,
-        pwm_pin: int = 0,
-        pwm_delay_seconds: float = 0.01,
+        refresh_delay_seconds: float = 0.01,
     ):
-        self.adc = ADC(Pin(adc_pin))
-        self.pwm_pin = pwm_pin
-        self.adc_delay_seconds = adc_delay_seconds
         self.pwm_value_logger = pwm_value_logger
-        self.init_pwm()
-        self.pwm_delay_seconds = pwm_delay_seconds
-        self.pwm_duty = 0
+        self.adc_delay_seconds = adc_delay_seconds
+        self.adc = ADC(Pin(adc_pin))
 
-    def init_pwm(self):
-        pwm0 = PWM(Pin(self.pwm_pin))
-        pwm0.freq(1000)
-        pwm0.duty_u16(0)
-        self.pwm0 = pwm0
+        self.refresh_delay_seconds = refresh_delay_seconds
+        self.adc_value = 0
 
     def adc_to_pwm(self, adc: float, zero_threshold: float = 127):
         adc_top = 65535
@@ -38,25 +30,24 @@ class PWMLed:
 
         return pwm
 
-    def update_pwm_duty(self, duty: float):
-        self.pwm_duty = duty
+    def set_adc_value(self, adc_value: float):
+        self.adc_value = adc_value
 
-    def get_pwm_duty(self):
-        return self.pwm_duty
+    def get_adc_value(self):
+        return self.adc_value
 
     async def adc_loop(self):
         while True:
             value = self.adc.read_u16()
-            self.update_pwm_duty(self.adc_to_pwm(value))
+            self.set_adc_value(self.adc_to_pwm(value))
 
             await asyncio.sleep(self.adc_delay_seconds)
 
-    async def pwm_change_loop(self):
+    async def display_change_loop(self):
         while True:
-            duty = self.get_pwm_duty()
-            self.pwm0.duty_u16(duty)
-            self.pwm_value_logger(duty)
-            await asyncio.sleep(self.pwm_delay_seconds)
+            adc_value = self.get_adc_value()
+            self.pwm_value_logger(adc_value)
+            await asyncio.sleep(self.refresh_delay_seconds)
 
 
 def render_value(value: float, top: float, stars: int):
@@ -79,6 +70,6 @@ async def main(coroutines):
 
 
 if __name__ == "__main__":
-    adcm = PWMLed(pwm_value_logger=display_adc)
+    adcm = ADCMonitor(pwm_value_logger=display_adc)
 
-    asyncio.run(main([adcm.pwm_change_loop, adcm.adc_loop]))  #  type: ignore
+    asyncio.run(main([adcm.display_change_loop, adcm.adc_loop]))  #  type: ignore

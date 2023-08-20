@@ -1,5 +1,7 @@
-import time
+from typing import Callable, List, Type
+
 from machine import ADC, Pin, PWM
+
 
 import uasyncio as asyncio
 
@@ -7,11 +9,11 @@ import uasyncio as asyncio
 class PWMLed:
     def __init__(
         self,
-        pwm_value_logger,
+        pwm_value_logger: Callable[[float], None],
         adc_delay_seconds: float = 0.05,
         adc_pin: int = 26,
-        pwm_pin=0,
-        pwm_delay_seconds=0.01,
+        pwm_pin: int = 0,
+        pwm_delay_seconds: float = 0.01,
     ):
         self.adc = ADC(Pin(adc_pin))
         self.pwm_pin = pwm_pin
@@ -27,7 +29,7 @@ class PWMLed:
         pwm0.duty_u16(0)
         self.pwm0 = pwm0
 
-    def adc_to_pwm(self, adc, zero_threshold=127):
+    def adc_to_pwm(self, adc: float, zero_threshold: float = 127):
         adc_top = 65535
         pwm_top = 65535
         pwm = (
@@ -38,7 +40,7 @@ class PWMLed:
 
         return pwm
 
-    def update_pwm_duty(self, duty):
+    def update_pwm_duty(self, duty: float):
         self.pwm_duty = duty
 
     def get_pwm_duty(self):
@@ -49,36 +51,37 @@ class PWMLed:
             value = self.adc.read_u16()
             self.update_pwm_duty(self.adc_to_pwm(value))
 
-            await asyncio.sleep(self.adc_delay_seconds)
+            await asyncio.sleep(self.adc_delay_seconds)  # type: ignore
 
     async def pwm_change_loop(self):
         while True:
             duty = self.get_pwm_duty()
             self.pwm0.duty_u16(duty)
             self.pwm_value_logger(duty)
-            await asyncio.sleep(self.pwm_delay_seconds)
+            await asyncio.sleep(self.pwm_delay_seconds)  # type: ignore
 
 
-def render_value(value, top, stars):
+def render_value(value: float, top: float, stars: int):
     return int(1.0 * stars * value / top)
 
 
-def display_adc(value):
+def display_adc(value: float):
     ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . ."
     n = render_value(value, 65535, len(ruler))
     rendered = ("[" + ruler[:n] + "]" if value > 0 else "--") + str(value)
     print(rendered)
 
 
-async def main(coroutines):
-    tasks = [
-        asyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101
+async def main(coroutines: Callable[[None], None]):
+    tasks: List[Type[asyncio.Task]] = [
+        asyncio.create_task(coro())  # pylint: disable=E1101 #  type: ignore
+        for coro in coroutines  #  type: ignore
     ]
     for task in tasks:
-        await task
+        await task  #  type: ignore
 
 
 if __name__ == "__main__":
     adcm = PWMLed(pwm_value_logger=display_adc)
 
-    asyncio.run(main([adcm.pwm_change_loop, adcm.adc_loop]))
+    asyncio.run(main([adcm.pwm_change_loop, adcm.adc_loop]))  #  type: ignore

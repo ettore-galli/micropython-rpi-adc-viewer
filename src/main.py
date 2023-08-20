@@ -1,5 +1,3 @@
-from typing import Callable, List, Type
-
 from machine import ADC, Pin, PWM
 
 
@@ -9,7 +7,7 @@ import uasyncio as asyncio
 class PWMLed:
     def __init__(
         self,
-        pwm_value_logger: Callable[[float], None],
+        pwm_value_logger,
         adc_delay_seconds: float = 0.05,
         adc_pin: int = 26,
         pwm_pin: int = 0,
@@ -51,14 +49,14 @@ class PWMLed:
             value = self.adc.read_u16()
             self.update_pwm_duty(self.adc_to_pwm(value))
 
-            await asyncio.sleep(self.adc_delay_seconds)  # type: ignore
+            await asyncio.sleep(self.adc_delay_seconds)
 
     async def pwm_change_loop(self):
         while True:
             duty = self.get_pwm_duty()
             self.pwm0.duty_u16(duty)
             self.pwm_value_logger(duty)
-            await asyncio.sleep(self.pwm_delay_seconds)  # type: ignore
+            await asyncio.sleep(self.pwm_delay_seconds)
 
 
 def render_value(value: float, top: float, stars: int):
@@ -66,19 +64,18 @@ def render_value(value: float, top: float, stars: int):
 
 
 def display_adc(value: float):
-    ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . ."
+    ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . |"
     n = render_value(value, 65535, len(ruler))
     rendered = ("[" + ruler[:n] + "]" if value > 0 else "--") + str(value)
     print(rendered)
 
 
-async def main(coroutines: Callable[[None], None]):
-    tasks: List[Type[asyncio.Task]] = [
-        asyncio.create_task(coro())  # pylint: disable=E1101 #  type: ignore
-        for coro in coroutines  #  type: ignore
+async def main(coroutines):
+    tasks = [
+        asyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101 #
     ]
     for task in tasks:
-        await task  #  type: ignore
+        await task
 
 
 if __name__ == "__main__":

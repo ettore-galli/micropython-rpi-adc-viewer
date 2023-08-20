@@ -4,17 +4,23 @@ from machine import ADC, Pin, PWM
 import uasyncio as asyncio
 
 
+class HardwareInformation:
+    adc_gpio_pin = 26
+    display_sda_gpio_pin = 16
+    display_scl_gpio_pin = 17
+
+
 class ADCMonitor:
     def __init__(
         self,
         pwm_value_logger,
         adc_delay_seconds: float = 0.05,
-        adc_pin: int = 26,
+        hardware_information: HardwareInformation = HardwareInformation(),
         refresh_delay_seconds: float = 0.01,
     ):
         self.pwm_value_logger = pwm_value_logger
         self.adc_delay_seconds = adc_delay_seconds
-        self.adc = ADC(Pin(adc_pin))
+        self.adc = ADC(Pin(hardware_information.adc_gpio_pin))
 
         self.refresh_delay_seconds = refresh_delay_seconds
         self.adc_value = 0
@@ -55,7 +61,7 @@ def render_value(value: float, top: float, stars: int):
 
 
 def display_adc(value: float):
-    ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . |"
+    ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . ."
     n = render_value(value, 65535, len(ruler))
     rendered = ("[" + ruler[:n] + "]" if value > 0 else "--") + str(value)
     print(rendered)

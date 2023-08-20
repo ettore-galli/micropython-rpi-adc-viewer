@@ -1,40 +1,55 @@
-from machine import ADC, Pin, PWM
-
+from machine import ADC, Pin, I2C
 
 import uasyncio as asyncio
+
+from ssd1306_official import ssd1306
 
 
 class HardwareInformation:
     adc_gpio_pin = 26
+    display_i2c_peripherial_id = 0
     display_sda_gpio_pin = 16
     display_scl_gpio_pin = 17
+    display_width = 128
+    display_height = 64
 
 
 class ADCMonitor:
     def __init__(
         self,
-        pwm_value_logger,
-        adc_delay_seconds: float = 0.05,
+        adc_value_logger,
         hardware_information: HardwareInformation = HardwareInformation(),
-        refresh_delay_seconds: float = 0.01,
+        adc_delay_seconds: float = 0.05,
+        refresh_delay_seconds: float = 0.05,
     ):
-        self.pwm_value_logger = pwm_value_logger
+        self.adc_value_logger = adc_value_logger
+        self.hardware_information = hardware_information
+
         self.adc_delay_seconds = adc_delay_seconds
         self.adc = ADC(Pin(hardware_information.adc_gpio_pin))
-
-        self.refresh_delay_seconds = refresh_delay_seconds
         self.adc_value = 0
 
-    def adc_to_pwm(self, adc: float, zero_threshold: float = 127):
-        adc_top = 65535
-        pwm_top = 65535
-        pwm = (
-            int(((adc - zero_threshold) / (adc_top - zero_threshold)) * pwm_top)
-            if adc > zero_threshold
-            else 0
+        self.refresh_delay_seconds = refresh_delay_seconds
+        self.display = self.display_setup(hardware_information=hardware_information)
+        self.display_init(self.display)
+        self.draw_init()
+        self.last_displayed_value: float = 0
+
+    def display_setup(self, hardware_information: HardwareInformation):
+        i2c = I2C(
+            hardware_information.display_i2c_peripherial_id,
+            sda=Pin(hardware_information.display_sda_gpio_pin),
+            scl=Pin(hardware_information.display_scl_gpio_pin),
+        )
+        display = ssd1306.SSD1306_I2C(
+            hardware_information.display_width, hardware_information.display_height, i2c
         )
 
-        return pwm
+        return display
+
+    def display_init(self, display):
+        display.contrast(255)
+        display.invert(0)
 
     def set_adc_value(self, adc_value: float):
         self.adc_value = adc_value
@@ -42,17 +57,47 @@ class ADCMonitor:
     def get_adc_value(self):
         return self.adc_value
 
+    def draw_init(self):
+        self.display.text("Value", 5, 5, 1)
+        self.display.show()
+
+    def display_value(self):
+        value = self.get_adc_value()
+        rect_height = 30
+        rect_left = 5
+        rect_top = 25
+        pixels_top = 120
+
+        def to_pixels(value):
+            return int(value * pixels_top / 65535)
+
+        display_pixels = to_pixels(value)
+
+        self.display.fill_rect(rect_left, rect_top, display_pixels, rect_height, 1)
+        self.display.fill_rect(
+            rect_left + display_pixels,
+            rect_top,
+            self.hardware_information.display_width - (rect_left + display_pixels),
+            rect_height,
+            0,
+        )
+
+        self.display.show()
+
+        self.displayed_value = value
+
     async def adc_loop(self):
         while True:
             value = self.adc.read_u16()
-            self.set_adc_value(self.adc_to_pwm(value))
+            self.set_adc_value(value)
 
             await asyncio.sleep(self.adc_delay_seconds)
 
     async def display_change_loop(self):
         while True:
             adc_value = self.get_adc_value()
-            self.pwm_value_logger(adc_value)
+            self.adc_value_logger(adc_value)
+            self.display_value()
             await asyncio.sleep(self.refresh_delay_seconds)
 
 
@@ -60,7 +105,7 @@ def render_value(value: float, top: float, stars: int):
     return int(1.0 * stars * value / top)
 
 
-def display_adc(value: float):
+def log_adc_value(value: float):
     ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . ."
     n = render_value(value, 65535, len(ruler))
     rendered = ("[" + ruler[:n] + "]" if value > 0 else "--") + str(value)
@@ -76,6 +121,6 @@ async def main(coroutines):
 
 
 if __name__ == "__main__":
-    adcm = ADCMonitor(pwm_value_logger=display_adc)
+    adcm = ADCMonitor(adc_value_logger=log_adc_value)
 
     asyncio.run(main([adcm.display_change_loop, adcm.adc_loop]))  #  type: ignore

@@ -115,20 +115,21 @@ class ADCMonitor:
     def display_wave(self):
         value = self.get_adc_value()
 
-        display_pixels = self.draw_wave_pixel_to_framebuffer(frame_buffer=self.display, value=value)
+        display_pixels = self.draw_wave_pixel_to_framebuffer(
+            frame_buffer=self.display, value=value
+        )
         self.display.show()
 
         self.pixels[self.pixels_index] = display_pixels
         self.pixels_index = (self.pixels_index + 1) % self.pixels_num
 
         self.displayed_value = value
-        print(self.display.buffer)
 
     async def adc_loop(self):
         while True:
             value = self.adc.read_u16()
             self.set_adc_value(value)
-
+            self.display_wave()
             await asyncio.sleep(self.adc_delay_seconds)
 
     async def display_change_loop(self):
@@ -161,4 +162,5 @@ async def main(coroutines):
 if __name__ == "__main__":
     adcm = ADCMonitor(adc_value_logger=log_adc_value)
 
-    asyncio.run(main([adcm.display_change_loop, adcm.adc_loop]))  #  type: ignore
+    # asyncio.run(main([adcm.display_change_loop, adcm.adc_loop]))  #  type: ignore
+    asyncio.run(main([adcm.adc_loop]))  #  type: ignore

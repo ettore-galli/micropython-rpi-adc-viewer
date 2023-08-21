@@ -7,9 +7,9 @@ from ssd1306_official import ssd1306
 
 class HardwareInformation:
     adc_gpio_pin = 26
-    display_i2c_peripherial_id = 0
-    display_sda_gpio_pin = 16
-    display_scl_gpio_pin = 17
+    display_i2c_peripherial_id = 1  # 0
+    display_sda_gpio_pin = 2  # 16
+    display_scl_gpio_pin = 3  # 17
     display_width = 128
     display_height = 64
 
@@ -19,8 +19,8 @@ class ADCMonitor:
         self,
         adc_value_logger,
         hardware_information: HardwareInformation = HardwareInformation(),
-        adc_delay_seconds: float = 0.05,
-        refresh_delay_seconds: float = 0.05,
+        adc_delay_seconds: float = 0.001,
+        refresh_delay_seconds: float = 0.001,
     ):
         self.adc_value_logger = adc_value_logger
         self.hardware_information = hardware_information
@@ -31,15 +31,22 @@ class ADCMonitor:
 
         self.refresh_delay_seconds = refresh_delay_seconds
         self.display = self.display_setup(hardware_information=hardware_information)
+
         self.display_init(self.display)
         self.draw_init()
+
         self.last_displayed_value: float = 0
+
+        self.pixels_num = 100
+        self.pixels = [0] * self.pixels_num
+        self.pixels_index = 0
 
     def display_setup(self, hardware_information: HardwareInformation):
         i2c = I2C(
             hardware_information.display_i2c_peripherial_id,
             sda=Pin(hardware_information.display_sda_gpio_pin),
             scl=Pin(hardware_information.display_scl_gpio_pin),
+            freq=800_000,
         )
         display = ssd1306.SSD1306_I2C(
             hardware_information.display_width, hardware_information.display_height, i2c
@@ -63,13 +70,13 @@ class ADCMonitor:
 
     def display_value(self):
         value = self.get_adc_value()
-        rect_height = 30
+        rect_height = 60
         rect_left = 5
         rect_top = 25
         pixels_top = 120
 
         def to_pixels(value):
-            return int(value * pixels_top / 65535)
+            return int(value * pixels_top / 65536)
 
         display_pixels = to_pixels(value)
 
@@ -86,6 +93,31 @@ class ADCMonitor:
 
         self.displayed_value = value
 
+    def display_wave(self):
+        value = self.get_adc_value()
+        left_start = 5
+        bottom_line = 60
+
+        pixels_top = 20
+
+        def to_pixels(value):
+            return int(value * pixels_top / 65536)
+
+        display_pixels = to_pixels(value)
+
+        left = left_start + self.pixels_index
+
+        self.display.pixel(left, bottom_line - self.pixels[self.pixels_index], 0)
+        self.display.pixel(left, bottom_line - display_pixels, 1)
+        self.pixels[self.pixels_index] = display_pixels
+        self.display.show()
+
+        self.pixels_index = (self.pixels_index + 1) % self.pixels_num
+
+        self.display.show()
+
+        self.displayed_value = value
+
     async def adc_loop(self):
         while True:
             value = self.adc.read_u16()
@@ -96,8 +128,8 @@ class ADCMonitor:
     async def display_change_loop(self):
         while True:
             adc_value = self.get_adc_value()
-            self.adc_value_logger(adc_value)
-            self.display_value()
+            # self.adc_value_logger(adc_value)
+            self.display_wave()
             await asyncio.sleep(self.refresh_delay_seconds)
 
 

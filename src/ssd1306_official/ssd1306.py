@@ -107,8 +107,6 @@ class SSD1306(framebuf.FrameBuffer):
         self.write_cmd(SET_PAGE_ADDR)
         self.write_cmd(0)
         self.write_cmd(self.pages - 1)
-        # print("-")
-        # print(self.buffer)
         self.write_data(self.buffer)
 
 

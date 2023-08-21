@@ -19,17 +19,17 @@ class ADCMonitor:
         self,
         adc_value_logger,
         hardware_information: HardwareInformation = HardwareInformation(),
-        adc_delay_seconds: float = 0.0001,
-        refresh_delay_seconds: float = 0.0001,
+        adc_delay_ms: float = 1,
+        refresh_delay_ms: float = 1,
     ):
         self.adc_value_logger = adc_value_logger
         self.hardware_information = hardware_information
 
-        self.adc_delay_seconds = adc_delay_seconds
+        self.adc_delay_ms = adc_delay_ms
         self.adc = ADC(Pin(hardware_information.adc_gpio_pin))
         self.adc_value = 0
 
-        self.refresh_delay_seconds = refresh_delay_seconds
+        self.refresh_delay_ms = refresh_delay_ms
         self.display = self.display_setup(hardware_information=hardware_information)
 
         self.display_init(self.display)
@@ -130,14 +130,14 @@ class ADCMonitor:
             value = self.adc.read_u16()
             self.set_adc_value(value)
             self.display_wave()
-            await asyncio.sleep(self.adc_delay_seconds)
+            await asyncio.sleep_ms(self.adc_delay_ms)
 
     async def display_change_loop(self):
         while True:
-            adc_value = self.get_adc_value()
+            # adc_value = self.get_adc_value()
             # self.adc_value_logger(adc_value)
             self.display_wave()
-            await asyncio.sleep(self.refresh_delay_seconds)
+            await asyncio.sleep_ms(self.refresh_delay_ms)
 
 
 def render_value(value: float, top: float, stars: int):

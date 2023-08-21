@@ -19,8 +19,8 @@ class ADCMonitor:
         self,
         adc_value_logger,
         hardware_information: HardwareInformation = HardwareInformation(),
-        adc_delay_seconds: float = 0.001,
-        refresh_delay_seconds: float = 0.001,
+        adc_delay_seconds: float = 0.0001,
+        refresh_delay_seconds: float = 0.0001,
     ):
         self.adc_value_logger = adc_value_logger
         self.hardware_information = hardware_information
@@ -46,7 +46,7 @@ class ADCMonitor:
             hardware_information.display_i2c_peripherial_id,
             sda=Pin(hardware_information.display_sda_gpio_pin),
             scl=Pin(hardware_information.display_scl_gpio_pin),
-            freq=800_000,
+            freq=400_000,
         )
         display = ssd1306.SSD1306_I2C(
             hardware_information.display_width, hardware_information.display_height, i2c
@@ -67,6 +67,7 @@ class ADCMonitor:
     def draw_init(self):
         self.display.text("Value", 5, 5, 1)
         self.display.show()
+        print(self.display.buffer)
 
     def display_value(self):
         value = self.get_adc_value()
@@ -93,12 +94,11 @@ class ADCMonitor:
 
         self.displayed_value = value
 
-    def display_wave(self):
-        value = self.get_adc_value()
+    def draw_wave_pixel_to_framebuffer(self, frame_buffer, value):
         left_start = 5
-        bottom_line = 60
+        bottom_line = 62
 
-        pixels_top = 20
+        pixels_top = 40
 
         def to_pixels(value):
             return int(value * pixels_top / 65536)
@@ -107,16 +107,22 @@ class ADCMonitor:
 
         left = left_start + self.pixels_index
 
-        self.display.pixel(left, bottom_line - self.pixels[self.pixels_index], 0)
-        self.display.pixel(left, bottom_line - display_pixels, 1)
-        self.pixels[self.pixels_index] = display_pixels
+        frame_buffer.pixel(left, bottom_line - self.pixels[self.pixels_index], 0)
+        frame_buffer.pixel(left, bottom_line - display_pixels, 1)
+
+        return display_pixels
+
+    def display_wave(self):
+        value = self.get_adc_value()
+
+        display_pixels = self.draw_wave_pixel_to_framebuffer(frame_buffer=self.display, value=value)
         self.display.show()
 
+        self.pixels[self.pixels_index] = display_pixels
         self.pixels_index = (self.pixels_index + 1) % self.pixels_num
 
-        self.display.show()
-
         self.displayed_value = value
+        print(self.display.buffer)
 
     async def adc_loop(self):
         while True:

@@ -23,4 +23,5 @@ See [this dedicated document](README-MICROPYTHON-SETUP.md)
 <https://github.com/micropython/micropython-lib/blob/master/micropython/drivers/display/ssd1306/ssd1306.py>
 
 ## Example project
+
 <https://github.com/makerportal/rpi-pico-ssd1306/blob/main/micropython/data_display/main.py>

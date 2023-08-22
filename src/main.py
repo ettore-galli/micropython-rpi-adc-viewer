@@ -14,6 +14,14 @@ class HardwareInformation:
     display_height = 64
 
 
+class PlotInformation:
+    def __init__(self, hardware_information: HardwareInformation) -> None:
+        self.left_start = 3
+        self.bottom_line = 62
+        self.pixels_top = 40
+        self.pixels_per_screen = hardware_information.display_width - self.left_start
+
+
 class ADCMonitor:
     def __init__(
         self,
@@ -61,25 +69,26 @@ class ADCMonitor:
         self.display.show()
 
     async def single_screen_loop(self):
-        left_start = 5
-        bottom_line = 62
-        pixels_top = 40
-        pixels_per_screen = 100
+        plot_information = PlotInformation(self.hardware_information)
 
         frame_buffer = self.display
 
         def to_pixels(value):
-            return int(value * pixels_top / 65536)
+            return int(value * plot_information.pixels_top / 65536)
 
         self.display.fill_rect(
-            left_start, bottom_line - pixels_top, pixels_per_screen, pixels_top + 1, 0
+            plot_information.left_start,
+            plot_information.bottom_line - plot_information.pixels_top + 1,
+            plot_information.pixels_per_screen,
+            plot_information.pixels_top + 1,
+            0,
         )
 
-        for position in range(pixels_per_screen):
+        for position in range(plot_information.pixels_per_screen):
             value = self.adc.read_u16()
             value_in_pixels = to_pixels(value)
-            left = left_start + position
-            frame_buffer.pixel(left, bottom_line - value_in_pixels, 1)
+            left = plot_information.left_start + position
+            frame_buffer.pixel(left, plot_information.bottom_line - value_in_pixels, 1)
             await asyncio.sleep_ms(self.adc_delay_ms)
 
         self.display.show()

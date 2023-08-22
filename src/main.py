@@ -68,15 +68,8 @@ class ADCMonitor:
         self.display.text("Value", 5, 5, 1)
         self.display.show()
 
-    async def single_screen_loop(self):
-        plot_information = PlotInformation(self.hardware_information)
-
-        frame_buffer = self.display
-
-        def to_pixels(value):
-            return int(value * plot_information.pixels_top / 65536)
-
-        self.display.fill_rect(
+    def clear_plot_area(self, frame_buffer, plot_information: PlotInformation):
+        frame_buffer.fill_rect(
             plot_information.left_start,
             plot_information.bottom_line - plot_information.pixels_top + 1,
             plot_information.pixels_per_screen,
@@ -84,12 +77,36 @@ class ADCMonitor:
             0,
         )
 
+    async def read_and_draw_screen(
+        self, frame_buffer, plot_information: PlotInformation, sample_value_reader
+    ):
+        def to_pixels(value):
+            return int(value * plot_information.pixels_top / 65536)
+
         for position in range(plot_information.pixels_per_screen):
-            value = self.adc.read_u16()
+            value = sample_value_reader()
             value_in_pixels = to_pixels(value)
             left = plot_information.left_start + position
             frame_buffer.pixel(left, plot_information.bottom_line - value_in_pixels, 1)
             await asyncio.sleep_ms(self.adc_delay_ms)
+
+        self.display.show()
+
+    async def single_screen_loop(self):
+        plot_information = PlotInformation(self.hardware_information)
+
+        frame_buffer = self.display
+
+        self.clear_plot_area(
+            frame_buffer=frame_buffer,
+            plot_information=plot_information,
+        )
+
+        await self.read_and_draw_screen(
+            frame_buffer=frame_buffer,
+            plot_information=plot_information,
+            sample_value_reader=self.adc.read_u16,
+        )
 
         self.display.show()
 

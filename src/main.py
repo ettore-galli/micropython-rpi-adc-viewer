@@ -95,11 +95,7 @@ class ADCMonitor:
 
         frame_buffer.show()
 
-    async def single_screen_loop(self):
-        plot_information = PlotInformation(self.hardware_information)
-
-        frame_buffer = self.display
-
+    async def single_screen_loop(self, frame_buffer, plot_information: PlotInformation):
         self.clear_plot_area(
             frame_buffer=frame_buffer,
             plot_information=plot_information,
@@ -114,8 +110,14 @@ class ADCMonitor:
         self.display.show()
 
     async def screen_loop(self):
+        plot_information = PlotInformation(self.hardware_information)
+        frame_buffer = self.display
+
         while True:
-            await self.single_screen_loop()
+            await self.single_screen_loop(
+                frame_buffer=frame_buffer,
+                plot_information=plot_information,
+            )
 
 
 def render_value(value: float, top: float, stars: int):

@@ -16,10 +16,12 @@ class HardwareInformation:
 
 class PlotInformation:
     def __init__(self, hardware_information: HardwareInformation) -> None:
-        self.left_start = 3
+        self.left_start = 5
         self.bottom_line = 62
         self.pixels_top = 40
-        self.pixels_per_screen = hardware_information.display_width - self.left_start
+        self.pixels_per_screen = (
+            hardware_information.display_width - 2 * self.left_start
+        )
 
 
 class ADCMonitor:
@@ -66,12 +68,13 @@ class ADCMonitor:
 
     def draw_init(self):
         self.display.text("Value", 5, 5, 1)
+        self.display.rect(0, 0, 128, 64, 1)
         self.display.show()
 
     def clear_plot_area(self, frame_buffer, plot_information: PlotInformation):
         frame_buffer.fill_rect(
             plot_information.left_start,
-            plot_information.bottom_line - plot_information.pixels_top + 1,
+            plot_information.bottom_line - (plot_information.pixels_top + 1),
             plot_information.pixels_per_screen,
             plot_information.pixels_top + 1,
             0,
@@ -90,7 +93,7 @@ class ADCMonitor:
             frame_buffer.pixel(left, plot_information.bottom_line - value_in_pixels, 1)
             await asyncio.sleep_ms(self.adc_delay_ms)
 
-        self.display.show()
+        frame_buffer.show()
 
     async def single_screen_loop(self):
         plot_information = PlotInformation(self.hardware_information)

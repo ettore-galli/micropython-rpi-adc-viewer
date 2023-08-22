@@ -133,7 +133,7 @@ def log_adc_value(value: float):
 
 async def main(coroutines):
     tasks = [
-        asyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101 #
+        asyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101
     ]
     for task in tasks:
         await task

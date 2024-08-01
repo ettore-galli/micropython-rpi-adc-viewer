@@ -34,16 +34,16 @@ Raspberry pi pico "plain/non-w" download page
 
 2. Follow the following instructions found in download page:
 
-> Flashing via UF2 bootloader
->
-> To get the board in bootloader mode ready for the
-> firmware update, execute machine.bootloader() at the
-> MicroPython REPL. Alternatively, hold down the BOOTSEL
-> button while plugging the board into USB. The uf2 file
-> below should then be copied to the USB mass storage
-> device that appears. Once programming of the new
-> firmware is complete the device will automatically
-> reset and be ready for use.
+Flashing via UF2 bootloader
+
+To get the board in bootloader mode ready for the
+firmware update, execute machine.bootloader() at the
+MicroPython REPL. Alternatively, hold down the BOOTSEL
+button while plugging the board into USB. The uf2 file
+below should then be copied to the USB mass storage
+device that appears. Once programming of the new
+firmware is complete the device will automatically
+reset and be ready for use.
 
 ## Create a virtualenv on development machine
 

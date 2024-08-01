@@ -1,6 +1,7 @@
 from machine import ADC, Pin, I2C  # type: ignore
+import utime  # type: ignore
 
-import uasyncio as asyncio
+# import uasyncio as asyncio
 
 from ssd1306_official import ssd1306
 
@@ -29,12 +30,12 @@ class ADCMonitor:
         self,
         adc_value_logger,
         hardware_information: HardwareInformation = HardwareInformation(),
-        adc_delay_ms: int = 1,
+        adc_delay_us: int = 169,
     ):
         self.adc_value_logger = adc_value_logger
         self.hardware_information = hardware_information
 
-        self.adc_delay_ms = adc_delay_ms
+        self.adc_delay_us = adc_delay_us
         self.adc = ADC(Pin(hardware_information.adc_gpio_pin))
         self.adc_value = 0
 
@@ -80,28 +81,39 @@ class ADCMonitor:
             0,
         )
 
-    async def read_and_draw_screen(
-        self, frame_buffer, plot_information: PlotInformation, sample_value_reader
-    ):
+    def read_screen(self, plot_information: PlotInformation, sample_value_reader):
         def to_pixels(value):
             return int(value * plot_information.pixels_top / 65536)
+
+        values = []
 
         for position in range(plot_information.pixels_per_screen):
             value = sample_value_reader()
             value_in_pixels = to_pixels(value)
             left = plot_information.left_start + position
-            frame_buffer.pixel(left, plot_information.bottom_line - value_in_pixels, 1)
-            await asyncio.sleep_ms(self.adc_delay_ms)
+            values.append((left, plot_information.bottom_line - value_in_pixels, 1))
+            utime.sleep_us(self.adc_delay_us)
 
-        frame_buffer.show()
+        return values
 
-    async def single_screen_loop(self, frame_buffer, plot_information: PlotInformation):
+    def read_and_draw_screen(
+        self, frame_buffer, plot_information: PlotInformation, sample_value_reader
+    ):
+
+        values = self.read_screen(
+            plot_information=plot_information, sample_value_reader=sample_value_reader
+        )
+
+        for x, y, color in values:
+            frame_buffer.pixel(x, y, color)
+
+    def single_screen_loop(self, frame_buffer, plot_information: PlotInformation):
         self.clear_plot_area(
             frame_buffer=frame_buffer,
             plot_information=plot_information,
         )
 
-        await self.read_and_draw_screen(
+        self.read_and_draw_screen(
             frame_buffer=frame_buffer,
             plot_information=plot_information,
             sample_value_reader=self.adc.read_u16,
@@ -109,12 +121,12 @@ class ADCMonitor:
 
         self.display.show()
 
-    async def screen_loop(self):
+    def screen_loop(self):
         plot_information = PlotInformation(self.hardware_information)
         frame_buffer = self.display
 
         while True:
-            await self.single_screen_loop(
+            self.single_screen_loop(
                 frame_buffer=frame_buffer,
                 plot_information=plot_information,
             )
@@ -131,14 +143,6 @@ def log_adc_value(value: float):
     print(rendered)
 
 
-async def main(coroutines):
-    tasks = [
-        asyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101
-    ]
-    for task in tasks:
-        await task
-
-
 if __name__ == "__main__":
     adcm = ADCMonitor(adc_value_logger=log_adc_value)
-    asyncio.run(main([adcm.screen_loop]))  #  type: ignore
+    adcm.screen_loop()

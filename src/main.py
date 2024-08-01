@@ -1,4 +1,4 @@
-from machine import ADC, Pin, I2C
+from machine import ADC, Pin, I2C  # type: ignore
 
 import uasyncio as asyncio
 
@@ -67,7 +67,7 @@ class ADCMonitor:
         return self.adc_value
 
     def draw_init(self):
-        self.display.text("Value", 5, 5, 1)
+        self.display.text("Val:", 5, 5, 1)
         self.display.rect(0, 0, 128, 64, 1)
         self.display.show()
 

@@ -71,67 +71,31 @@ Make sure your virtualenv is active
 
 ```shell
 pip install --upgrade micropy-cli
+pip install --upgrade micropy-cli[create_stubs]
 ```
 
-## Search for available stubs, then install (once per device)
+## Install the stubs
 
-Please note: This step creates a folder on user root folder:
-
-```~/.micropy``````
-
-This step must be run once per new device being used, and does not need to be repeated for each new project.
+### Stub installation
 
 ```shell
-# Search
-micropy stubs search [query]  
-micropy stubs search pico  
+pip install micropython-rp2-pico_w-stubs
+```
 
+### Ignore residual possible pylance error
 
-# Install
-micropy stubs add [stub-name]  
-micropy stubs add micropython-rp2-pico_w-stubs
+```python
+from machine import ADC, Pin, I2C  # type: ignore
+
 ```
 
 ## Create a new project
 
-This step creates the proper configuration for VS Code to use stubs.
-
-Stubs are needed only for linting and code completion, but not for development.
-
-Settings are created by default under the new project folder; after the project is created, you can do the following (alternative)
-
-* Use the newly created folder as project workspace
-
-* Move the configurations up une level to make the current folder the "project level" (thos makes VS Code read the settings) from withon the current folder.
-
-* Copy the generated configuration from another project, and skip this step.
-
-We follow the second alternative here.
-
-```shell
-micropy init dummy
+```txt
+src
+    __init__.py
+    main.py
 ```
-
-Choose the following when prompted:
-
-   Choose any Templates to Generate
-      ● VSCode Settings for Autocompletion/Intellisense
-      ○ Pymakr Configuration
-      ● Pylint MicroPython Settings
-      ● Git Ignore Template
-      ● main.py & boot.py files
-
-   Which stubs would you like to use?
-      ● micropython-rp2-pico-w-stubs
-      ● micropython-stdlib-stubs
-
-Bring the following one level up (parallel to the newly created src directory, see above)
-
-* Folder: ```.vscode```
-* Folder: ```.micropy```
-* File: ```.pylintrc```
-
-Then, remove the ```dummy``` folder (dummy is the newly created project, see above)
 
 ## Install mpremote
 

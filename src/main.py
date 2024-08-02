@@ -1,7 +1,7 @@
 from machine import ADC, Pin, I2C  # type: ignore
 import utime  # type: ignore
 
-import uasyncio
+import asyncio
 
 from ssd1306_official import ssd1306
 
@@ -127,12 +127,10 @@ class ADCMonitor:
             sample_value_reader=sample_value_reader,
         )
 
-        uasyncio.create_task(
-            self.draw_screen(
-                frame_buffer=frame_buffer,
-                plot_information=plot_information,
-                raw_values=raw_values,
-            )
+        await self.draw_screen(
+            frame_buffer=frame_buffer,
+            plot_information=plot_information,
+            raw_values=raw_values,
         )
 
     async def draw_screen(
@@ -175,7 +173,7 @@ def render_value(value: float, top: float, stars: int):
 
 async def main(coroutines):
     tasks = [
-        uasyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101
+        asyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101
     ]
     for task in tasks:
         await task
@@ -190,4 +188,4 @@ def log_adc_value(value: float):
 
 if __name__ == "__main__":
     adcm = ADCMonitor(adc_value_logger=log_adc_value)
-    uasyncio.run(main([adcm.screen_loop]))  #  type: ignore
+    asyncio.run(main([adcm.screen_loop]))  #  type: ignore

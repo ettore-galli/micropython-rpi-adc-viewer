@@ -1,7 +1,7 @@
 from machine import ADC, Pin, I2C  # type: ignore
 import utime  # type: ignore
 
-# import uasyncio as asyncio
+import uasyncio
 
 from ssd1306_official import ssd1306
 
@@ -81,26 +81,36 @@ class ADCMonitor:
             0,
         )
 
-    def read_screen(self, plot_information: PlotInformation, sample_value_reader):
+    def read_adc_values_for_frame(number_of_samples: int, sample_value_reader):
+        raw_adc_values = []
+        for _ in range(number_of_samples):
+            raw_adc_values.append(sample_value_reader())
+        return raw_adc_values
+
+    def prepare_frame_buffer_pixels(
+        self, plot_information: PlotInformation, sample_value_reader
+    ):
         def to_pixels(value):
             return int(value * plot_information.pixels_top / 65536)
 
-        values = []
+        frame_buffer_pixels = []
 
         for position in range(plot_information.pixels_per_screen):
             value = sample_value_reader()
             value_in_pixels = to_pixels(value)
             left = plot_information.left_start + position
-            values.append((left, plot_information.bottom_line - value_in_pixels, 1))
+            frame_buffer_pixels.append(
+                (left, plot_information.bottom_line - value_in_pixels, 1)
+            )
             utime.sleep_us(self.adc_delay_us)
 
-        return values
+        return frame_buffer_pixels
 
     def read_and_draw_screen(
         self, frame_buffer, plot_information: PlotInformation, sample_value_reader
     ):
 
-        values = self.read_screen(
+        values = self.prepare_frame_buffer_pixels(
             plot_information=plot_information, sample_value_reader=sample_value_reader
         )
 
@@ -136,6 +146,14 @@ def render_value(value: float, top: float, stars: int):
     return int(1.0 * stars * value / top)
 
 
+async def main(coroutines):
+    tasks = [
+        uasyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101
+    ]
+    for task in tasks:
+        await task
+
+
 def log_adc_value(value: float):
     ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . ."
     n = render_value(value, 65535, len(ruler))
@@ -145,4 +163,4 @@ def log_adc_value(value: float):
 
 if __name__ == "__main__":
     adcm = ADCMonitor(adc_value_logger=log_adc_value)
-    adcm.screen_loop()
+    uasyncio.run(main([adcm.screen_loop]))  #  type: ignore

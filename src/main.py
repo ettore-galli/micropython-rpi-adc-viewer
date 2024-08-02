@@ -81,7 +81,7 @@ class ADCMonitor:
             0,
         )
 
-    def read_adc_values_for_frame(number_of_samples: int, sample_value_reader):
+    def read_adc_values_for_frame(self, number_of_samples: int, sample_value_reader):
         raw_adc_values = []
         for _ in range(number_of_samples):
             raw_adc_values.append(sample_value_reader())
@@ -95,8 +95,12 @@ class ADCMonitor:
 
         frame_buffer_pixels = []
 
-        for position in range(plot_information.pixels_per_screen):
-            value = sample_value_reader()
+        raw_values = self.read_adc_values_for_frame(
+            number_of_samples=plot_information.pixels_per_screen,
+            sample_value_reader=sample_value_reader,
+        )
+
+        for position, value in enumerate(raw_values):
             value_in_pixels = to_pixels(value)
             left = plot_information.left_start + position
             frame_buffer_pixels.append(

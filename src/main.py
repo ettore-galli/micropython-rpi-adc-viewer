@@ -30,7 +30,7 @@ class ADCMonitor:
         self,
         adc_value_logger,
         hardware_information: HardwareInformation = HardwareInformation(),
-        adc_delay_us: int = 169,
+        adc_delay_us: int = 1,
     ):
         self.adc_value_logger = adc_value_logger
         self.hardware_information = hardware_information
@@ -81,7 +81,7 @@ class ADCMonitor:
         for _ in range(number_of_samples):
             raw_adc_values.append(sample_value_reader())
             utime.sleep_us(self.adc_delay_us)
-            
+
         return raw_adc_values
 
     def clear_plot_area(self, frame_buffer, plot_information: PlotInformation):

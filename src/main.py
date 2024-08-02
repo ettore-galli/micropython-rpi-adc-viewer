@@ -80,6 +80,8 @@ class ADCMonitor:
         raw_adc_values = []
         for _ in range(number_of_samples):
             raw_adc_values.append(sample_value_reader())
+            utime.sleep_us(self.adc_delay_us)
+            
         return raw_adc_values
 
     def clear_plot_area(self, frame_buffer, plot_information: PlotInformation):
@@ -105,7 +107,6 @@ class ADCMonitor:
             frame_buffer_pixels.append(
                 (left, plot_information.bottom_line - value_in_pixels, 1)
             )
-            utime.sleep_us(self.adc_delay_us)
 
         return frame_buffer_pixels
 

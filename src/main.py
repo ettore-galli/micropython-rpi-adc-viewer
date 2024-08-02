@@ -74,6 +74,12 @@ class ADCMonitor:
         self.display.rect(0, 0, 128, 64, 1)
         self.display.show()
 
+    def read_adc_values_for_frame(self, number_of_samples: int, sample_value_reader):
+        raw_adc_values = []
+        for _ in range(number_of_samples):
+            raw_adc_values.append(sample_value_reader())
+        return raw_adc_values
+
     def clear_plot_area(self, frame_buffer, plot_information: PlotInformation):
         frame_buffer.fill_rect(
             plot_information.left_start,
@@ -82,12 +88,6 @@ class ADCMonitor:
             plot_information.pixels_top + 1,
             0,
         )
-
-    def read_adc_values_for_frame(self, number_of_samples: int, sample_value_reader):
-        raw_adc_values = []
-        for _ in range(number_of_samples):
-            raw_adc_values.append(sample_value_reader())
-        return raw_adc_values
 
     def prepare_frame_buffer_pixels(
         self, plot_information: PlotInformation, raw_values
@@ -124,26 +124,33 @@ class ADCMonitor:
             sample_value_reader=sample_value_reader,
         )
 
+        self.draw_screen(
+            frame_buffer=frame_buffer,
+            plot_information=plot_information,
+            raw_values=raw_values,
+        )
+
+    def draw_screen(self, frame_buffer, plot_information: PlotInformation, raw_values):
         frame_buffer_points = self.prepare_frame_buffer_pixels(
             plot_information=plot_information, raw_values=raw_values
         )
+
+        self.clear_plot_area(
+            frame_buffer=frame_buffer,
+            plot_information=plot_information,
+        )
+
         self.draw_points_on_screen(
             frame_buffer=frame_buffer, frame_buffer_points=frame_buffer_points
         )
 
     def single_screen_loop(self, frame_buffer, plot_information: PlotInformation):
-        self.clear_plot_area(
-            frame_buffer=frame_buffer,
-            plot_information=plot_information,
-        )
 
         self.read_and_draw_screen(
             frame_buffer=frame_buffer,
             plot_information=plot_information,
             sample_value_reader=self.adc.read_u16,
         )
-
-        # self.display.show()
 
     def screen_loop(self):
         plot_information = PlotInformation(self.hardware_information)

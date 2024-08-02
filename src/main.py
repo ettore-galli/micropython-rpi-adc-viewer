@@ -44,7 +44,9 @@ class ADCMonitor:
         self.display_init(self.display)
         self.draw_init()
 
-    def display_setup(self, hardware_information: HardwareInformation):
+    def display_setup(
+        self, hardware_information: HardwareInformation
+    ) -> ssd1306.SSD1306_I2C:
         i2c = I2C(
             hardware_information.display_i2c_peripherial_id,
             sda=Pin(hardware_information.display_sda_gpio_pin),
@@ -88,17 +90,12 @@ class ADCMonitor:
         return raw_adc_values
 
     def prepare_frame_buffer_pixels(
-        self, plot_information: PlotInformation, sample_value_reader
+        self, plot_information: PlotInformation, raw_values
     ):
         def to_pixels(value):
             return int(value * plot_information.pixels_top / 65536)
 
         frame_buffer_pixels = []
-
-        raw_values = self.read_adc_values_for_frame(
-            number_of_samples=plot_information.pixels_per_screen,
-            sample_value_reader=sample_value_reader,
-        )
 
         for position, value in enumerate(raw_values):
             value_in_pixels = to_pixels(value)
@@ -110,16 +107,29 @@ class ADCMonitor:
 
         return frame_buffer_pixels
 
+    def draw_points_on_screen(
+        self, frame_buffer: ssd1306.SSD1306_I2C, frame_buffer_points
+    ):
+        for x, y, color in frame_buffer_points:
+            frame_buffer.pixel(x, y, color)
+
+        frame_buffer.show()
+
     def read_and_draw_screen(
         self, frame_buffer, plot_information: PlotInformation, sample_value_reader
     ):
 
-        values = self.prepare_frame_buffer_pixels(
-            plot_information=plot_information, sample_value_reader=sample_value_reader
+        raw_values = self.read_adc_values_for_frame(
+            number_of_samples=plot_information.pixels_per_screen,
+            sample_value_reader=sample_value_reader,
         )
 
-        for x, y, color in values:
-            frame_buffer.pixel(x, y, color)
+        frame_buffer_points = self.prepare_frame_buffer_pixels(
+            plot_information=plot_information, raw_values=raw_values
+        )
+        self.draw_points_on_screen(
+            frame_buffer=frame_buffer, frame_buffer_points=frame_buffer_points
+        )
 
     def single_screen_loop(self, frame_buffer, plot_information: PlotInformation):
         self.clear_plot_area(
@@ -133,7 +143,7 @@ class ADCMonitor:
             sample_value_reader=self.adc.read_u16,
         )
 
-        self.display.show()
+        # self.display.show()
 
     def screen_loop(self):
         plot_information = PlotInformation(self.hardware_information)

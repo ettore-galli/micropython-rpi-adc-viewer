@@ -127,10 +127,12 @@ class ADCMonitor:
             sample_value_reader=sample_value_reader,
         )
 
-        await self.draw_screen(
-            frame_buffer=frame_buffer,
-            plot_information=plot_information,
-            raw_values=raw_values,
+        uasyncio.create_task(
+            self.draw_screen(
+                frame_buffer=frame_buffer,
+                plot_information=plot_information,
+                raw_values=raw_values,
+            )
         )
 
     async def draw_screen(

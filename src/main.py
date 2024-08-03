@@ -1,5 +1,4 @@
 from machine import ADC, Pin, I2C  # type: ignore
-import utime  # type: ignore
 
 import asyncio
 
@@ -28,16 +27,20 @@ class PlotInformation:
 class ADCMonitor:
     def __init__(
         self,
-        adc_value_logger,
         hardware_information: HardwareInformation = HardwareInformation(),
-        adc_delay_us: int = 1,
+        adc_delay: float = 0.001,
+        frame_delay: float = 0.05,
     ):
-        self.adc_value_logger = adc_value_logger
         self.hardware_information = hardware_information
 
-        self.adc_delay_us = adc_delay_us
+        self.adc_delay = adc_delay
+        self.frame_delay = frame_delay
+
         self.adc = ADC(Pin(hardware_information.adc_gpio_pin))
         self.adc_value = 0
+
+        self.frame_raw_values = []
+        self.frame_read_event = asyncio.Event()
 
         self.display = self.display_setup(hardware_information=hardware_information)
 
@@ -80,7 +83,7 @@ class ADCMonitor:
         raw_adc_values = []
         for _ in range(number_of_samples):
             raw_adc_values.append(sample_value_reader())
-            utime.sleep_us(self.adc_delay_us)
+            await asyncio.sleep(self.adc_delay)
 
         return raw_adc_values
 
@@ -156,36 +159,33 @@ class ADCMonitor:
             sample_value_reader=self.adc.read_u16,
         )
 
-    async def screen_loop(self):
+    async def main_data_loop(self):
+
         plot_information = PlotInformation(self.hardware_information)
-        frame_buffer = self.display
+
+        asyncio.create_task(self.draw_screen_loop())
 
         while True:
-            await self.single_screen_loop(
+            self.frame_raw_values = await self.read_adc_values_for_frame(
+                number_of_samples=plot_information.pixels_per_screen,
+                sample_value_reader=self.adc.read_u16,
+            )
+            self.frame_read_event.set()
+
+    async def draw_screen_loop(self):
+        plot_information = PlotInformation(self.hardware_information)
+        frame_buffer = self.display
+        while True:
+            await self.frame_read_event.wait()
+            await self.draw_screen(
                 frame_buffer=frame_buffer,
                 plot_information=plot_information,
+                raw_values=self.frame_raw_values,
             )
-
-
-def render_value(value: float, top: float, stars: int):
-    return int(1.0 * stars * value / top)
-
-
-async def main(coroutines):
-    tasks = [
-        asyncio.create_task(coro()) for coro in coroutines  # pylint: disable=E1101
-    ]
-    for task in tasks:
-        await task
-
-
-def log_adc_value(value: float):
-    ruler = ". . . . : . . . . 1 . . . . : . . . . 2 . . . . : . . . . 3 . . ."
-    n = render_value(value, 65535, len(ruler))
-    rendered = ("[" + ruler[:n] + "]" if value > 0 else "--") + str(value)
-    print(rendered)
+            self.frame_read_event.clear()
+            await asyncio.sleep(self.frame_delay)
 
 
 if __name__ == "__main__":
-    adcm = ADCMonitor(adc_value_logger=log_adc_value)
-    asyncio.run(main([adcm.screen_loop]))  #  type: ignore
+    adcm = ADCMonitor()
+    asyncio.run(adcm.main_data_loop())  #  type: ignore

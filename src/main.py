@@ -28,7 +28,7 @@ class ADCMonitor:
     def __init__(
         self,
         hardware_information: HardwareInformation = HardwareInformation(),
-        adc_delay: float = 0.001,
+        adc_delay: float = 0.0001,
         frame_delay: float = 0.05,
     ):
         self.hardware_information = hardware_information
